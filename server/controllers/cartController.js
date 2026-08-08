@@ -1,3 +1,4 @@
+import mongoose, { trusted } from "mongoose";
 import Cart from "../models/cartModel.js";
 import Product from "../models/productModel.js";
 
@@ -152,6 +153,45 @@ export const updateCartQuantity = async (req, res) => {
         code: "INTERNAL_SERVER_ERROR",
         details: error.message,
       },
+    });
+  }
+};
+export const deleteFromCart = async (req, res) => {
+  try {
+    const productID = req.params.id;
+    if (!productID || !mongoose.Types.ObjectId.isValid(productID)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid product ID",
+      });
+    }
+    const cart = await Cart.findOne({ user: req.user._id });
+    if (!cart) {
+      return res.status(404).json({
+        success: false,
+        message: "Cart not found",
+      });
+    }
+    const newProducts = cart.products.filter(
+      (item) => item.product.toString() !== productID,
+    );
+    if (newProducts.length === cart.products.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found in cart",
+      });
+    }
+    cart.products = newProducts;
+    await cart.save();
+    res.status(200).json({
+      success: true,
+      message: "Product removed from cart successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
     });
   }
 };
